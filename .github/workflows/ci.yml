@@ -10,12 +10,18 @@ permissions:
 
 jobs:
   test:
-    name: Emacs ${{matrix.emacs}}
+    name: Emacs ${{matrix.emacs}} (${{matrix.revision}})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         emacs: ["29.4", "30.1"]
+        revision: [auto]
+        # The abi-14 branch, which Emacs builds with an older tree-sitter
+        # library use, also loads in newer ones.
+        include:
+          - emacs: "30.1"
+            revision: abi-14
     steps:
       - uses: actions/checkout@v6
 
@@ -27,12 +33,16 @@ jobs:
         run: emacs --batch -L . --eval "(setq byte-compile-error-on-warn t)" -f batch-byte-compile nlpplus-ts-mode.el
 
       # Builds all five grammars from the branch that matches this Emacs's
-      # tree-sitter library.
+      # tree-sitter library, or from abi-14 when the matrix asks for it.
       - name: Install the grammars
         run: |
-          emacs --batch -L . -l nlpplus-ts-mode \
-            --eval '(message "tree-sitter ABI %s, revision %s" (treesit-library-abi-version) (nlpplus-ts-mode--revision))' \
-            -f nlpplus-ts-mode-install-grammars
+          emacs --batch -L . -l nlpplus-ts-mode --eval '(progn
+            (when (equal "${{matrix.revision}}" "abi-14")
+              (advice-add (quote nlpplus-ts-mode--revision) :override
+                          (lambda () "abi-14")))
+            (message "tree-sitter ABI %s, revision %s"
+                     (treesit-library-abi-version) (nlpplus-ts-mode--revision))
+            (nlpplus-ts-mode-install-grammars))'
 
       - name: Run the tests
         run: emacs --batch -L . -l test/nlpplus-ts-mode-tests.el -f ert-run-tests-batch-and-exit
@@ -54,8 +64,9 @@ jobs:
             (setq checkdoc-diagnostic-buffer "*warn*")
             (checkdoc-file "nlpplus-ts-mode.el")
             (with-current-buffer "*warn*"
-              (when (> (buffer-size) 0)
-                (princ (buffer-string))
+              (princ (buffer-string))
+              (goto-char (point-min))
+              (when (re-search-forward "^[^ *\n]+:[0-9]+:" nil t)
                 (kill-emacs 1))))'
 
       - name: package-lint
