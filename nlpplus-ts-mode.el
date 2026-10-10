@@ -3,6 +3,7 @@
 ;; Copyright (C) 2026 David de Hilster
 
 ;; Author: David de Hilster <dehilster@gmail.com>
+;; Assisted-by: Claude:claude-opus-5-5
 ;; Maintainer: David de Hilster <dehilster@gmail.com>
 ;; URL: https://github.com/VisualText/nlpplus-ts-mode
 ;; Version: 0.1.0
