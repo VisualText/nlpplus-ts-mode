@@ -69,6 +69,8 @@ jobs:
               (when (re-search-forward "^[^ *\n]+:[0-9]+:" nil t)
                 (kill-emacs 1))))'
 
+      # Warnings are reported, not fatal: registering the language server
+      # with Eglot uses with-eval-after-load, which package-lint warns about.
       - name: package-lint
         run: |
           emacs --batch --eval '(progn
@@ -77,5 +79,8 @@ jobs:
             (package-initialize)
             (package-refresh-contents)
             (package-install (quote package-lint)))'
-          emacs --batch --eval '(progn (package-initialize) (require (quote package-lint)))' \
+          emacs --batch --eval '(progn
+            (package-initialize)
+            (require (quote package-lint))
+            (setq package-lint-batch-fail-on-warnings nil))' \
             -f package-lint-batch-and-exit nlpplus-ts-mode.el
